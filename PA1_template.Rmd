@@ -7,19 +7,127 @@ output:
 
 
 ## Loading and preprocessing the data
+```{r unzipping and read in}
+unzip('activity.zip', list = FALSE, overwrite = TRUE)
+activity.raw <- read.csv('activity.csv')
+```
+
+Since the Date Variable is actually imported as a factor we had to convert it 
+to date.
+
+```{r convert date}
+activity.raw$date <- as.Date(activity.raw$date, "%Y-%m-%d")
+```
+
 
 
 
 ## What is mean total number of steps taken per day?
+First of to answer this question we have to omit the NA-Values, after that we can calculate the sum of steps per day.
+Also we calculate the median and mean of the steps per day, because it is asked
+in the second question.
 
+```{r sum up the steps per day}
+
+# Removing NAs
+activity.wona <- activity.raw[complete.cases(activity.raw), ]
+
+# summarize the data
+library(dplyr)
+activity.grpd <- group_by(activity.wona, date)
+activity.daily <- summarise(activity.grpd,
+  sum_of_steps = sum(steps, na.rm = TRUE),
+  mean = mean(steps, na.rm = TRUE),
+  median = median(steps, na.rm = TRUE))
+```
+
+After we got that data we need, we plot it in a historgram
+
+```{r histogram}
+hist(activity.daily$sum_of_steps, 
+     main="Histogram of daily sum of steps",
+     xlab="daily sum of steps")
+```
+
+Now we can answer the second question. For this we´re gonna output a table 
+showing the mean and median steps per day
+
+```{r show mean and median of steps per day in a table}
+library(xtable)
+xt <- xtable(data.frame(activity.daily))
+print(xt, type="html")
+```
 
 
 ## What is the average daily activity pattern?
+For this question we have to go back to our dataset without NAs and group it 
+again by 5-minute interval.
 
+```{r create grouped dataset by 5-minute interval}
+library(dplyr)
+activity.grpd.int <- group_by(activity.wona, interval)
+activity.int <- summarise(activity.grpd.int,
+  avg_of_steps = sum(steps, na.rm = TRUE) / n())
+```
+
+Now we can make the plot with the already finished dataset which you can see here:
+
+```{r plot the step interval graphic}
+plot(activity.int$avg_of_steps ~ activity.int$interval, 
+    type = "l",
+    main = "Average amount of steps per 5-minute interval",
+    xlab = "5-minute interval",
+    ylab = 'Average amount of steps (overall)')
+```
 
 
 ## Imputing missing values
+1. How many NA values are there in the raw dataset?
+```{r calculate number of NAs}
+number_of_NA <- sum(!complete.cases(activity.raw))
+```
+There are `r number_of_NA`NA values in the dataset.
 
+2. Which strategy for imputing the NAs will be used?
+I will use the mean for the 5-minute-interval for imputing missing values.
+
+3. Create a dataset based on the original dataset where the missing data is 
+imputed.
+
+```{r impute the missing data via a 5-minute-interval}
+# make a LEFT OUTER JOIN to move the averages to the right side of the original
+# dataframe
+activity.merged <- merge(activity.raw, activity.int, by="interval", all.x=TRUE)
+
+# now overwrite the NAs with the averages from the right side
+activity.merged[is.na(activity.merged$steps), 2] <- activity.merged[is.na(activity.merged$steps), 4]
+```
+
+4. Based on 3 construct the grouped dataset for sum, mean and median of steps per day, plot a histogram and describe differences
+
+```{r group imputed dataset}
+# summarize the data
+activity.imp <- group_by(activity.merged, date)
+activity.imp.daily <- summarise(activity.imp,
+  sum_of_steps = sum(steps, na.rm = TRUE),
+  mean = mean(steps, na.rm = TRUE),
+  median = median(steps, na.rm = TRUE))
+```
+Since we now got our working dataset we can start plotting
+
+```{r histogram of imputed dataset}
+hist(activity.imp.daily$sum_of_steps,
+     main = "Histogram of imputed dataset of total steps",
+     xlab = "sum of steps per day",)
+```
+
+For comparing the different means and medians of steps per day, I will create
+a plot, where you can compare the different lines in the plot
+
+```{r make compareable plot for mean and median of steps per day}
+library(ggplot2)
+ggplot()
+```
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
