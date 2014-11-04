@@ -123,11 +123,43 @@ hist(activity.imp.daily$sum_of_steps,
 
 For comparing the different means and medians of steps per day, I will create
 a plot, where you can compare the different lines in the plot
+#TODO
 
-```{r make compareable plot for mean and median of steps per day}
-library(ggplot2)
-ggplot()
 ```
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+1. Create a new Variable which indicates if a day was a weekend or weekday.
+
+```{r weekend or weekday}
+# set the given day
+activity.merged$wd <- weekdays(activity.merged$date)
+
+# set everything to weekday
+activity.merged$weekday <- "weekday"
+
+# overwrite everything which is weekend with "weekend"
+activity.merged[activity.merged$wd %in% c("Samstag", "Sonntag"), ]$weekday <- "weekend"
+```
+
+2. Create a plot with 5-minute interval against the average steps by weekend or weekday
+
+To answer this question we firstly have to construct the aggregated dataset:
+
+```{r construct aggregated dataset for weekend and weekday}
+activity.week <- group_by(activity.merged, weekday, interval)
+activity.week.int <- summarise(activity.week,
+  avg_of_steps = sum(steps, na.rm = TRUE) / n())
+```
+
+Now we can start to make the comparing plot with the facets set to weekday:
+
+```{r make final plot by weekday}
+library(ggplot2)
+ggplot(data=activity.week.int, aes(x=interval, y = avg_of_steps, colour = weekday, group = weekday)) + geom_line()  + facet_wrap(~weekday) +ggtitle("Average steps taken by 5-minute interval for weekdays and weekends") + xlab("5-minute interval") +
+    ylab("average number of steps")
+```
+
+You can clearly see more steps in earlier time intervals in the left plot when
+there is a weekday. And more steps in the middle of the day when there is a weekend.
